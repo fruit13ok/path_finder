@@ -1,0 +1,203 @@
+<html>
+<!-- 
+    Use BFS to traverse the matrix to find shortest graph.
+    Need to know number of nodes.
+    Need adjacency list.
+    Need start and end nodes for search the shortest path.
+    BFS explore itself, then explore its neighbour, then next level of neighbour's neighbours.
+    Need to track VISITED nodes.
+    Use queue to track which node to visit next.
+        enque initial node,
+        loop until queue is empty,
+            deque head and do something, than enque its UNVISITED neighbours,
+    Construct the path from start node to end node.
+ -->
+<head>
+    <style>
+        :root {
+            --grid-color: black;
+            --grid-size: 3;
+            --box-size: 20px;
+        }
+        #grid{
+            display: grid;
+            grid-gap: 1px;
+            grid-template-columns: repeat(var(--grid-size), auto);
+            grid-template-rows: repeat(var(--grid-size), auto);
+            justify-content: center;
+        }
+        .box {
+            width: var(--box-size);
+            height: var(--box-size);
+            margin:0;
+            padding:0;
+            border: 1px solid var(--grid-color);
+            /* text-align: center; */
+        }
+    </style>
+    <script language="javascript">
+        var count = 0;
+        var board;
+        var cells;
+        var matrix = [];
+        var adjacencyList = {};
+        var resultPath = [[0,0]];
+        // first and last boxes are green, so as walkable boxes
+        // wall is black
+        function randColor(){
+            if(Math.floor(Math.random() * (2+1)) == 0){
+                return 'black';
+            }
+            return 'green';
+        }
+        // reset grid
+        function clearGrid(parentNode){
+            count = 0;
+            cells = null;
+            matrix = [];
+            resultPath = [[0,0]];
+            var child = parentNode.lastElementChild;  
+            while (child) { 
+                parentNode.removeChild(child); 
+                child = parentNode.lastElementChild; 
+            } 
+        };
+        function chase(visted, x, y){
+            if(visted[x][y].parent[0] != -1 && visted[x][y].parent[1] != -1){
+                console.log("x",visted[x][y].parent[0],"y",visted[x][y].parent[1]);
+                
+                chase(visted, visted[x][y].parent[0], visted[x][y].parent[1]);
+                resultPath.push([x,y]);
+            }
+        }
+        function genPath(){
+            findPath(matrix, [0,0], [matrix.length-1, matrix.length-1]);
+        }
+        function findPath(maze, start, destination){
+            console.log("at find path", maze, start, destination);
+            var row = maze.length;
+            var column = maze[0].length;
+            var visited = [];
+            // create visited with all false
+            for (let i = 0; i < row; i++) {
+                visited.push([]);
+                for (let j = 0; j < column; j++) {
+                    // 
+                    // visited[i].push(false);
+                    visited[i].push({isVisited: false, parent: [-1,-1]});
+                }
+            }
+            var directionX = [1, -1, 0, 0];
+            var directionY = [0, 0, 1, -1];
+            // bfs
+            var queue = [];
+            // start point and end point set to be different
+            // start from start point
+            queue.push(start);
+            // set start point visited
+            // visited[start[0]][start[1]] = true;
+            visited[start[0]][start[1]] = {isVisited: true, parent: [-1,-1]};
+            while (queue.length > 0) {
+                // remove head from queue and check its 4 neighbor squares
+                let current = queue.shift();
+                let curX = current[0], curY = current[1];
+                // find which neighbor in 4 directions can move to
+                for (let k = 0; k < 4; k++) {
+                    let neighbor = move(maze, curX, curY, directionX[k], directionY[k]);
+                    // if cannot move this direction skip to next direction
+                    if (visited[neighbor[0]][neighbor[1]].isVisited || maze[neighbor[0]][neighbor[1]] == "black"){
+                        continue;
+                    }else{
+                        // set neighbor visited
+                        // visited[neighbor[0]][neighbor[1]] = true;
+                        visited[neighbor[0]][neighbor[1]] = {isVisited: true, parent: [curX,curY]};
+                        // check reach destination
+                        if (neighbor[0] === destination[0] && neighbor[1] === destination[1]){
+                            console.log("found path to destination",visited);
+                            chase(visited, visited.length-1, visited.length-1);
+                            // console.log('result',resultPath);
+                            updateGrid(maze, resultPath);
+                            return true;
+                        }
+                        // push neighbor
+                        queue.push(neighbor);
+                    }
+                }
+            }
+        }
+        function move(maze, startX, startY, directionX, directionY){
+            var nextX = startX + directionX;
+            var nextY = startY + directionY;
+            if(nextX < 0 || nextY < 0 || nextX >= maze.length || nextY >= maze[0].length || maze[nextX][nextY] == true){
+                return [startX, startY];
+            }
+            return [nextX, nextY];
+        }
+        function createGrid(x) {
+            x = x || 3;
+            board = document.getElementById("grid");
+            clearGrid(board);
+            board.style.setProperty("--grid-size", x);
+            for (var rows = 0; rows < x; rows++) {
+                matrix.push([]);
+                // create adjacencyList each row with empty array, one at a time
+                adjacencyList[rows] = [];
+                for (var columns = 0; columns < x; columns++) {
+                    // count++;
+                    var div = document.createElement('div');
+                    div.className = 'box';
+                    div.id = `box${count}`;
+                    div.setAttribute('data-index', count);
+                    count++;
+                    if((rows == 0 && columns == 0) || (rows == x-1 && columns == x-1) ){
+                        div.style.backgroundColor='red';
+                        matrix[rows].push('red');
+                    }else{
+                        var color = randColor();
+                        div.style.backgroundColor=color;
+                        // push walkable index to adjacencyList
+                        if(color == 'green'){
+                            adjacencyList[rows].push(columns);
+                        }
+                        matrix[rows].push(color);
+                    }
+                    board.appendChild(div);
+                    // the innerHTML way, but don't know how to pass in color
+                    // board.innerHTML += `<div class='box' id='box${count}' data-index='${count}' style="background-color:green;"></div>`;
+                }
+                // matrix[rows].forEach(cell => {
+                //     console.log(rows, cell);
+                // });
+            }
+            // either way works
+            // cells = Array.from(board.children);
+            // cells = document.querySelectorAll(".box");
+            // cells.forEach(cell => {
+            //     console.log(cell.getAttribute('data-index'));
+            // });
+            console.log(matrix);
+            // console.log(adjacencyList);
+            return matrix;
+        }
+        function updateGrid(myMatrix,myResultPath){
+            // console.log(myMatrix);
+            // console.log(myResultPath);
+            for(let i=0; i<myResultPath.length; i++){
+                var boxNum = myResultPath[i][0] * myMatrix.length + myResultPath[i][1];
+                // console.log('->',myResultPath[i][0],myResultPath[i][1],'->',`box${boxNum}`);
+                document.getElementById(`box${boxNum}`).style.backgroundColor='yellow';
+            }
+            // document.getElementById('box0').style.backgroundColor='yellow'
+            // console.log(document.getElementById('box0'));
+        }
+    </script>
+</head>
+
+<body>
+    <input type="number" id="gridSize">
+    <input type="button" onclick="createGrid(document.getElementById('gridSize').value)" value="Generate Grid">
+    <input type="button" onclick="genPath()" value="Find Path">
+    <div id="grid"></div>
+</body>
+
+</html>
